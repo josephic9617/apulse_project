@@ -13,5 +13,6 @@ wheels/
 dump.rdb
 appendonly.aof
 celerybeat-schedule
+celerybeat-schedule*
 celerybeat-schedule.*
 *.pid
