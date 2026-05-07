@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-devops-bg text-devops-text font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glow-border {
+    @apply border border-devops-accent shadow-[0_0_10px_rgba(16,185,129,0.3)];
+  }
+  .glow-text {
+    @apply text-devops-accent drop-shadow-[0_0_8px_rgba(16,185,129,0.8)];
+  }
+}

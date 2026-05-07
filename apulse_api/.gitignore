@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Celery & Redis
+dump.rdb
+appendonly.aof
+celerybeat-schedule
+celerybeat-schedule.*
+*.pid

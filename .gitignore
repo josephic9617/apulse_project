@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+apulse.db
+.DS_Store
+*.log
+
+# Celery & Redis
+dump.rdb
+appendonly.aof
+celerybeat-schedule
+celerybeat-schedule.*
+*.pid
