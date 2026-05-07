@@ -1,90 +1,133 @@
-# API Monitoring Dashboard
+# APulse: Enterprise API Monitoring Dashboard
 
-A real-world DevOps API monitoring solution designed to provide crystal-clear insights into system health. Built with a high-performance **FastAPI** backend and a beautiful, responsive **React + Vite** frontend.
+APulse is a professional-grade, DevOps-themed API monitoring solution designed for real-time visibility into microservices health. It features a distributed architecture using **FastAPI**, **Celery**, and **Redis**, providing a robust system for tracking latency, uptime, and service alerts.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.136.1-009688?logo=fastapi)
 ![React](https://img.shields.io/badge/React-18-blue?logo=react)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-38B2AC?logo=tailwind-css)
+![Celery](https://img.shields.io/badge/Celery-5.6-green?logo=celery)
 
 ---
 
-## 📸 Screenshots
+## 📸 Visual Overview
 
-### Overview Dashboard
+### 🔐 Secure Access
+Premium JWT-authenticated login portal for secure infrastructure management.
+![Login Page](screenshots/login.png)
+
+### 📊 Performance Dashboard
+Real-time monitoring of service status, global uptime gauge, and active alert feed.
 ![Dashboard Overview](screenshots/dashboard.png)
 
-### Real-Time Latency Charts
-![Dashboard Chart](screenshots/dashboard_chart.png)
+---
+
+## 🚀 Key Features
+
+*   **🛡️ Enterprise Security**: Integrated JWT-based authentication ensuring secure access to infrastructure metrics.
+*   **⚙️ Advanced Health Checks**: Support for custom HTTP methods (`GET`, `POST`, `PUT`, `DELETE`) and granular expected status code validation.
+*   **📈 Visual Analytics**: Interactive, high-fidelity line charts for response latency tracking powered by `Recharts`.
+*   **⏲️ Global Uptime Gauge**: Dynamic calculation of 24-hour aggregate system uptime.
+*   **🚨 Intelligent Alerting**: Smart event-driven alerting system designed to prevent notification fatigue by suppressing redundant alerts.
+*   **🕹️ Infrastructure Controls**: Live controls to pause/resume monitoring, delete endpoints, and resolve system alerts.
+*   **🧹 Automated Maintenance**: Background "Janitor" tasks (Celery Beat) for automated database pruning and log rotation.
+*   **💎 Modern DevOps UI**: Premium dark-mode interface with glassmorphism effects, built using Tailwind CSS.
 
 ---
 
-## 🚀 Features
+## 🔗 API Reference
 
-* **Advanced Health Checks**: Configure Custom HTTP Methods (GET, POST, PUT, DELETE) and specific expected status codes (e.g. 200, 404).
-* **Real-Time Visualizations**: Interactive real-time line charts for tracking API latency, powered by `recharts`.
-* **Global Uptime Gauge**: True 24-hour uptime calculation displayed in a sleek semi-circle gauge.
-* **Smart Alerting**: Intelligent alerting system that avoids spamming notifications for continuous downtime.
-* **Auto-Refresh Controls**: Easily pause and resume dashboard data fetching to investigate issues.
-* **Premium UI/UX**: "DevOps vibe" aesthetic featuring Tailwind CSS dark mode (`#0f172a`), emerald accents, glassmorphism, and smooth animations.
-* **Auto-Cleanup**: Automated background Celery beat task that prunes ping history older than 7 days.
+### Authentication
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/auth/login` | `POST` | Exchange credentials for a JWT Access Token. |
 
----
+### Service Management
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/services` | `GET` | List all registered monitors. |
+| `/api/services` | `POST` | Create a new service monitor with custom config. |
+| `/api/services/{id}` | `PATCH` | Update monitor status (Pause/Resume). |
+| `/api/services/{id}` | `DELETE` | Permanently remove a monitor. |
 
-## 🛠️ Architecture
-
-* **Backend (`apulse_api`)**:
-  * **Framework**: FastAPI (Python)
-  * **Database**: SQLite & SQLAlchemy (Async)
-  * **Task Queue**: Celery (Workers & Beat schedule)
-  * **Broker**: Redis
-* **Frontend (`apulse_dashboard`)**:
-  * **Framework**: React + Vite (TypeScript)
-  * **Styling**: Tailwind CSS v3
-  * **Charts**: Recharts
-  * **Icons**: Lucide React
+### Metrics & Alerts
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/services/{id}/metrics`| `GET` | Retrieve historical latency data points. |
+| `/api/alerts` | `GET` | Fetch recent system alerts. |
+| `/api/alerts/{id}/resolve` | `PATCH` | Mark a specific alert as resolved. |
+| `/api/stats` | `GET` | Aggregate system-wide health statistics. |
 
 ---
 
-## 🏁 Getting Started
+## 🧠 System Architecture
+
+```mermaid
+graph TD
+    User((Infrastructure Admin)) -->|Secure Login| Frontend[React + Vite Frontend]
+    Frontend -->|JWT Auth / 10s Polling| API[FastAPI Gateway]
+    
+    subgraph "Backend Infrastructure"
+        API -->|Async persistence| DB[(SQLite / PostgreSQL)]
+        API -->|Task Broker| Redis{Redis Message Broker}
+        
+        subgraph "Background Engine"
+            Redis -->|Job Distribution| Worker[Celery Worker]
+            Beat[Celery Beat Scheduler] -->|Periodic Tasks| Redis
+        end
+        
+        Worker -->|Health Check| ExternalAPI[Monitored Services]
+        Worker -->|Record Latency| DB
+    end
+```
+
+---
+
+## 🏁 Installation & Setup
 
 ### Prerequisites
-* **Redis** (Required for Celery background tasks)
-* **uv** (Python package manager)
-* **Node.js & npm**
+* **Redis**: Required as the distributed task broker.
+* **uv**: Modern Python package manager.
+* **Node.js & npm**: For the React dashboard.
 
-### 1. Start Redis
-Ensure you have a Redis instance running locally:
+### 1. External Dependencies
+Ensure Redis is running:
 ```bash
 docker run -d -p 6379:6379 redis:alpine
 ```
 
-### 2. Setup Backend
-Navigate to the API folder, sync dependencies, and start the services:
+### 2. Backend Environment
 ```bash
 cd apulse_api
 uv sync
 
-# Terminal 1: Start the FastAPI Server
+# Terminal 1: API Server
 uv run uvicorn app.main:app --reload --port 8002
 
-# Terminal 2: Start the Celery Worker
+# Terminal 2: Background Worker
 uv run celery -A app.tasks worker --loglevel=info
 
-# Terminal 3: Start the Celery Beat Scheduler
+# Terminal 3: Task Scheduler
 uv run celery -A app.tasks beat --loglevel=info
 ```
+> **Auth**: `admin` / `admin123`
 
-### 3. Setup Frontend
-Navigate to the Dashboard folder, install npm packages, and start the Vite dev server:
+### 3. Frontend Dashboard
 ```bash
 cd apulse_dashboard
 npm install
 npm run dev
 ```
 
-### 4. View Dashboard
-Open your browser and navigate to:
-**[http://localhost:5174](http://localhost:5174)**
+---
 
-Click **+ Add API** to start monitoring your endpoints!
+## ☁️ Deployment Strategy
+
+*   **Production Stack**: Nginx (Reverse Proxy) + Gunicorn/Uvicorn + Docker Compose.
+*   **Scalability**: Distributed Celery workers can be scaled horizontally to handle thousands of monitors.
+*   **Database**: Migratable to PostgreSQL for high-concurrency environments.
+
+---
+
+**[APulse Documentation](http://localhost:5174)**
+Professional API Monitoring for Modern DevOps Teams.

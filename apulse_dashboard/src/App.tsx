@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Activity, ServerCrash, CheckCircle2, AlertTriangle, Plus, Trash2, PauseCircle, PlayCircle, CheckSquare, ChevronDown, ChevronUp, X, Play, Pause } from 'lucide-react';
+import { Activity, ServerCrash, CheckCircle2, AlertTriangle, Plus, Trash2, PauseCircle, PlayCircle, CheckSquare, ChevronDown, ChevronUp, X, Play, Pause, LogOut, Lock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import clsx from 'clsx';
 
@@ -34,12 +34,18 @@ interface Ping {
 }
 
 function App() {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('apulse_token'));
   const [stats, setStats] = useState<Stats | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   
+  // Auth Form
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
   // Add API Form state
   const [newSvcName, setNewSvcName] = useState('');
   const [newSvcUrl, setNewSvcUrl] = useState('');
@@ -49,12 +55,47 @@ function App() {
   const [expandedSvc, setExpandedSvc] = useState<number | null>(null);
   const [metricsData, setMetricsData] = useState<Record<number, Ping[]>>({});
 
+  const api = axios.create({
+    baseURL: '',
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+
+  api.interceptors.response.use(
+    res => res,
+    err => {
+      if (err.response?.status === 401) {
+        setToken(null);
+        localStorage.removeItem('apulse_token');
+      }
+      return Promise.reject(err);
+    }
+  );
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post('/api/auth/login', { username, password });
+      const newToken = res.data.access_token;
+      setToken(newToken);
+      localStorage.setItem('apulse_token', newToken);
+      setAuthError('');
+    } catch (err: any) {
+      setAuthError(err.response?.data?.detail || 'Login failed');
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    localStorage.removeItem('apulse_token');
+  };
+
   const fetchData = async () => {
+    if (!token) return;
     try {
       const [statsRes, svcRes, alertRes] = await Promise.all([
-        axios.get('/api/stats'),
-        axios.get('/api/services'),
-        axios.get('/api/alerts')
+        api.get('/api/stats'),
+        api.get('/api/services'),
+        api.get('/api/alerts')
       ]);
       setStats(statsRes.data);
       setServices(svcRes.data);
@@ -65,8 +106,9 @@ function App() {
   };
 
   const fetchMetrics = async (serviceId: number) => {
+    if (!token) return;
     try {
-      const res = await axios.get(`/api/services/${serviceId}/metrics`);
+      const res = await api.get(`/api/services/${serviceId}/metrics`);
       setMetricsData(prev => ({ ...prev, [serviceId]: res.data }));
     } catch (e) {
       console.error("Failed to fetch metrics", e);
@@ -74,11 +116,13 @@ function App() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
   useEffect(() => {
-    if (!isAutoRefresh) return;
+    if (!isAutoRefresh || !token) return;
     const interval = setInterval(() => {
       fetchData();
       if (expandedSvc !== null) {
@@ -86,12 +130,12 @@ function App() {
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [expandedSvc, isAutoRefresh]);
+  }, [expandedSvc, isAutoRefresh, token]);
 
   const addService = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('/api/services', { 
+      await api.post('/api/services', { 
         name: newSvcName, 
         url: newSvcUrl, 
         method: newSvcMethod,
@@ -111,7 +155,7 @@ function App() {
 
   const deleteService = async (id: number) => {
     try {
-      await axios.delete(`/api/services/${id}`);
+      await api.delete(`/api/services/${id}`);
       fetchData();
     } catch (e) {
       console.error("Failed to delete", e);
@@ -120,7 +164,7 @@ function App() {
 
   const toggleService = async (id: number, currentStatus: boolean) => {
     try {
-      await axios.patch(`/api/services/${id}`, { is_active: !currentStatus });
+      await api.patch(`/api/services/${id}`, { is_active: !currentStatus });
       fetchData();
     } catch (e) {
       console.error("Failed to toggle", e);
@@ -129,7 +173,7 @@ function App() {
 
   const resolveAlert = async (id: number) => {
     try {
-      await axios.patch(`/api/alerts/${id}/resolve`);
+      await api.patch(`/api/alerts/${id}/resolve`);
       fetchData();
     } catch (e) {
       console.error("Failed to resolve alert", e);
@@ -144,6 +188,50 @@ function App() {
       fetchMetrics(id);
     }
   };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-devops-bg font-mono p-4">
+        <div className="w-full max-w-md bg-devops-panel/60 backdrop-blur-xl border border-devops-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+          <div className="p-8">
+            <div className="flex flex-col items-center gap-4 mb-8">
+              <div className="p-4 bg-devops-accent/10 border border-devops-accent/20 rounded-full">
+                <Lock className="w-8 h-8 text-devops-accent" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white">APulse Secure Access</h1>
+              <p className="text-devops-muted text-sm text-center">Enter your credentials to access the monitoring dashboard</p>
+            </div>
+            
+            <form onSubmit={handleLogin} className="flex flex-col gap-5">
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-devops-muted mb-2 font-bold">Username</label>
+                <input 
+                  type="text" required value={username} onChange={e => setUsername(e.target.value)}
+                  className="w-full bg-devops-bg/50 border border-devops-border text-white px-4 py-3 rounded-lg focus:outline-none focus:border-devops-accent transition-all duration-300"
+                  placeholder="admin"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-devops-muted mb-2 font-bold">Password</label>
+                <input 
+                  type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-devops-bg/50 border border-devops-border text-white px-4 py-3 rounded-lg focus:outline-none focus:border-devops-accent transition-all duration-300"
+                  placeholder="••••••••"
+                />
+              </div>
+              {authError && <p className="text-red-400 text-xs text-center animate-pulse">{authError}</p>}
+              <button type="submit" className="w-full bg-devops-accent text-devops-bg font-bold py-4 rounded-lg hover:bg-emerald-400 transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5">
+                Authorize
+              </button>
+            </form>
+          </div>
+          <div className="p-4 bg-black/20 border-t border-devops-border text-center">
+            <p className="text-[10px] text-devops-muted tracking-widest uppercase">Powered by APulse Infrastructure</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const openAlerts = alerts.filter(a => !a.resolved);
   const uptime = stats?.uptime_percentage ?? 100;
@@ -167,6 +255,13 @@ function App() {
             className="flex items-center gap-2 bg-devops-accent hover:bg-emerald-400 text-devops-bg font-bold py-2 px-4 rounded transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(16,185,129,0.5)]"
           >
             <Plus className="w-4 h-4" /> Add API
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="p-2 text-devops-muted hover:text-red-400 transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </header>

@@ -17,6 +17,13 @@ class Service(Base):
     pings = relationship("PingHistory", back_populates="service", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="service", cascade="all, delete-orphan")
 
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+
 class PingHistory(Base):
     __tablename__ = "ping_history"
 
