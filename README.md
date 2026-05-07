@@ -30,7 +30,7 @@ Real-time monitoring of service status, global uptime gauge, and active alert fe
 *   **⏲️ Global Uptime Gauge**: Dynamic calculation of 24-hour aggregate system uptime.
 *   **🚨 Intelligent Alerting**: Smart event-driven alerting system designed to prevent notification fatigue by suppressing redundant alerts.
 *   **🕹️ Infrastructure Controls**: Live controls to pause/resume monitoring, delete endpoints, and resolve system alerts.
-*   **🧹 Automated Maintenance**: Background "Janitor" tasks (Celery Beat) for automated database pruning and log rotation.
+*   **🧹 Automated Maintenance**: Background "Janitor" tasks (Celery Beat) for automated database pruning. Metrics retention policy is fully configurable via schedule intervals.
 *   **💎 Modern DevOps UI**: Premium dark-mode interface with glassmorphism effects, built using Tailwind CSS.
 
 ---
@@ -68,7 +68,7 @@ graph TD
     Frontend -->|JWT Auth / 10s Polling| API[FastAPI Gateway]
     
     subgraph "Backend Infrastructure"
-        API -->|Async persistence| DB[(SQLite / PostgreSQL)]
+        API -->|Async persistence| DB[(Development: SQLite / Production: PostgreSQL)]
         API -->|Task Broker| Redis{Redis Message Broker}
         
         subgraph "Background Engine"
@@ -76,7 +76,7 @@ graph TD
             Beat[Celery Beat Scheduler] -->|Periodic Tasks| Redis
         end
         
-        Worker -->|Health Check| ExternalAPI[Monitored Services]
+        Worker -->|Health Check| ExternalAPI[External Services]
         Worker -->|Record Latency| DB
     end
 ```
@@ -112,7 +112,7 @@ uv run celery -A app.tasks beat --loglevel=info
 ```
 > **Auth**: `admin` / `admin123`
 
-### 3. Frontend Dashboard
+### 3. Setup Frontend
 ```bash
 cd apulse_dashboard
 npm install
@@ -125,9 +125,8 @@ npm run dev
 
 *   **Production Stack**: Nginx (Reverse Proxy) + Gunicorn/Uvicorn + Docker Compose.
 *   **Scalability**: Distributed Celery workers can be scaled horizontally to handle thousands of monitors.
-*   **Database**: Migratable to PostgreSQL for high-concurrency environments.
+*   **Database Migration**: Built with SQLAlchemy to support seamless migration to PostgreSQL for high-concurrency environments.
 
 ---
 
-**[APulse Documentation](http://localhost:5174)**
 Professional API Monitoring for Modern DevOps Teams.
